@@ -143,6 +143,171 @@ def build_township_breakdown(source_ws, target_ws) -> None:
         append_period(f"Annual_{year}", rows)
 
 
+def build_semester_age_breakdown(source_ws, target_ws) -> None:
+    headers = [cell.value if cell.value is not None else "" for cell in next(source_ws.iter_rows(min_row=1, max_row=1))]
+    header_map = get_header_index(headers, [
+        "Year",
+        "Organization",
+        "Organization ",
+        "Project Name",
+        "indicator",
+        "Q1 U1 Male",
+        "Q1 U1 Female",
+        "Q1 1-5 Male ",
+        "Q1 1-5 Female",
+        "Q1 Total",
+        "Q2 U1 Male",
+        "Q2 U1 Female",
+        "Q2 1-5 Male ",
+        "Q2 1-5 Female",
+        "Q2 Total",
+        "Q3 U1 Male",
+        "Q3 U1 Female",
+        "Q3 1-5 Male ",
+        "Q3 1-5 Female",
+        "Q3 Total",
+        "Q4 U1 Male",
+        "Q4 U1 Female",
+        "Q4 1-5 Male ",
+        "Q4 1-5 Female",
+        "Q4 Total",
+    ])
+
+    required_headers = [
+        "Year",
+        "Organization",
+        "Project Name",
+        "indicator",
+        "Q1 U1 Male",
+        "Q1 U1 Female",
+        "Q1 1-5 Male ",
+        "Q1 1-5 Female",
+        "Q1 Total",
+        "Q2 U1 Male",
+        "Q2 U1 Female",
+        "Q2 1-5 Male ",
+        "Q2 1-5 Female",
+        "Q2 Total",
+        "Q3 U1 Male",
+        "Q3 U1 Female",
+        "Q3 1-5 Male ",
+        "Q3 1-5 Female",
+        "Q3 Total",
+        "Q4 U1 Male",
+        "Q4 U1 Female",
+        "Q4 1-5 Male ",
+        "Q4 1-5 Female",
+        "Q4 Total",
+    ]
+    for name in required_headers:
+        if header_map.get(name) is None:
+            raise ValueError(f"Required column '{name}' was not found in sheet '{source_ws.title}'")
+
+    header_row = [
+        "Year",
+        "Organization",
+        "Project Name",
+        "indicator",
+        "S1 U1 Male",
+        "S1 U1 Female",
+        "S1 1-5 Male",
+        "S1 1-5 Female",
+        "S1 Total",
+        "S2 U1 Male",
+        "S2 U1 Female",
+        "S2 1-5 Male",
+        "S2 1-5 Female",
+        "S2 Total",
+        "Annual U1 Male",
+        "Annual U1 Female",
+        "Annual 1-5 Male",
+        "Annual 1-5 Female",
+        "Annual Total",
+    ]
+    target_ws.append(header_row)
+
+    header_fill = PatternFill(fill_type="solid", fgColor="D9EAF7")
+    header_font = Font(bold=True)
+    for cell in target_ws[1]:
+        cell.fill = header_fill
+        cell.font = header_font
+
+    for row in source_ws.iter_rows(min_row=2, values_only=True):
+        if not any(cell is not None and str(cell).strip() != "" for cell in row):
+            continue
+
+        year = row[header_map["Year"]] if header_map["Year"] is not None and header_map["Year"] < len(row) else ""
+        organization = row[header_map["Organization"]] if header_map["Organization"] is not None and header_map["Organization"] < len(row) else None
+        if organization is None and header_map.get("Organization ") is not None and header_map["Organization "] < len(row):
+            organization = row[header_map["Organization "]]
+        project_name = row[header_map["Project Name"]] if header_map["Project Name"] is not None and header_map["Project Name"] < len(row) else ""
+        indicator = row[header_map["indicator"]] if header_map["indicator"] is not None and header_map["indicator"] < len(row) else ""
+
+        q1_u1_male = to_number(row[header_map["Q1 U1 Male"]] if header_map["Q1 U1 Male"] is not None and header_map["Q1 U1 Male"] < len(row) else None)
+        q1_u1_female = to_number(row[header_map["Q1 U1 Female"]] if header_map["Q1 U1 Female"] is not None and header_map["Q1 U1 Female"] < len(row) else None)
+        q1_1_5_male = to_number(row[header_map["Q1 1-5 Male "]] if header_map["Q1 1-5 Male "] is not None and header_map["Q1 1-5 Male "] < len(row) else None)
+        q1_1_5_female = to_number(row[header_map["Q1 1-5 Female"]] if header_map["Q1 1-5 Female"] is not None and header_map["Q1 1-5 Female"] < len(row) else None)
+        q1_total = to_number(row[header_map["Q1 Total"]] if header_map["Q1 Total"] is not None and header_map["Q1 Total"] < len(row) else None)
+
+        q2_u1_male = to_number(row[header_map["Q2 U1 Male"]] if header_map["Q2 U1 Male"] is not None and header_map["Q2 U1 Male"] < len(row) else None)
+        q2_u1_female = to_number(row[header_map["Q2 U1 Female"]] if header_map["Q2 U1 Female"] is not None and header_map["Q2 U1 Female"] < len(row) else None)
+        q2_1_5_male = to_number(row[header_map["Q2 1-5 Male "]] if header_map["Q2 1-5 Male "] is not None and header_map["Q2 1-5 Male "] < len(row) else None)
+        q2_1_5_female = to_number(row[header_map["Q2 1-5 Female"]] if header_map["Q2 1-5 Female"] is not None and header_map["Q2 1-5 Female"] < len(row) else None)
+        q2_total = to_number(row[header_map["Q2 Total"]] if header_map["Q2 Total"] is not None and header_map["Q2 Total"] < len(row) else None)
+
+        q3_u1_male = to_number(row[header_map["Q3 U1 Male"]] if header_map["Q3 U1 Male"] is not None and header_map["Q3 U1 Male"] < len(row) else None)
+        q3_u1_female = to_number(row[header_map["Q3 U1 Female"]] if header_map["Q3 U1 Female"] is not None and header_map["Q3 U1 Female"] < len(row) else None)
+        q3_1_5_male = to_number(row[header_map["Q3 1-5 Male "]] if header_map["Q3 1-5 Male "] is not None and header_map["Q3 1-5 Male "] < len(row) else None)
+        q3_1_5_female = to_number(row[header_map["Q3 1-5 Female"]] if header_map["Q3 1-5 Female"] is not None and header_map["Q3 1-5 Female"] < len(row) else None)
+        q3_total = to_number(row[header_map["Q3 Total"]] if header_map["Q3 Total"] is not None and header_map["Q3 Total"] < len(row) else None)
+
+        q4_u1_male = to_number(row[header_map["Q4 U1 Male"]] if header_map["Q4 U1 Male"] is not None and header_map["Q4 U1 Male"] < len(row) else None)
+        q4_u1_female = to_number(row[header_map["Q4 U1 Female"]] if header_map["Q4 U1 Female"] is not None and header_map["Q4 U1 Female"] < len(row) else None)
+        q4_1_5_male = to_number(row[header_map["Q4 1-5 Male "]] if header_map["Q4 1-5 Male "] is not None and header_map["Q4 1-5 Male "] < len(row) else None)
+        q4_1_5_female = to_number(row[header_map["Q4 1-5 Female"]] if header_map["Q4 1-5 Female"] is not None and header_map["Q4 1-5 Female"] < len(row) else None)
+        q4_total = to_number(row[header_map["Q4 Total"]] if header_map["Q4 Total"] is not None and header_map["Q4 Total"] < len(row) else None)
+
+        s1_u1_male = q1_u1_male + q2_u1_male
+        s1_u1_female = q1_u1_female + q2_u1_female
+        s1_1_5_male = q1_1_5_male + q2_1_5_male
+        s1_1_5_female = q1_1_5_female + q2_1_5_female
+        s1_total = q1_total + q2_total
+
+        s2_u1_male = q3_u1_male + q4_u1_male
+        s2_u1_female = q3_u1_female + q4_u1_female
+        s2_1_5_male = q3_1_5_male + q4_1_5_male
+        s2_1_5_female = q3_1_5_female + q4_1_5_female
+        s2_total = q3_total + q4_total
+
+        annual_u1_male = q1_u1_male + q2_u1_male + q3_u1_male + q4_u1_male
+        annual_u1_female = q1_u1_female + q2_u1_female + q3_u1_female + q4_u1_female
+        annual_1_5_male = q1_1_5_male + q2_1_5_male + q3_1_5_male + q4_1_5_male
+        annual_1_5_female = q1_1_5_female + q2_1_5_female + q3_1_5_female + q4_1_5_female
+        annual_total = q1_total + q2_total + q3_total + q4_total
+
+        target_ws.append([
+            year,
+            organization,
+            project_name,
+            indicator,
+            s1_u1_male,
+            s1_u1_female,
+            s1_1_5_male,
+            s1_1_5_female,
+            s1_total,
+            s2_u1_male,
+            s2_u1_female,
+            s2_1_5_male,
+            s2_1_5_female,
+            s2_total,
+            annual_u1_male,
+            annual_u1_female,
+            annual_1_5_male,
+            annual_1_5_female,
+            annual_total,
+        ])
+
+
 def build_semester_report(input_path: Path, output_path: Path, source_sheet: str = "Indicator", target_sheet: str = "Semester_Report") -> Path:
     wb = load_workbook(input_path, data_only=False)
     if source_sheet not in wb.sheetnames:
@@ -335,6 +500,11 @@ def build_semester_report(input_path: Path, output_path: Path, source_sheet: str
         del wb["twn_breakdown"]
     breakdown_ws = wb.create_sheet(title="twn_breakdown")
     build_township_breakdown(wb[disaggregate_source_sheet], breakdown_ws)
+
+    if "semester_age_breakdown" in wb.sheetnames:
+        del wb["semester_age_breakdown"]
+    age_breakdown_ws = wb.create_sheet(title="semester_age_breakdown")
+    build_semester_age_breakdown(source_ws, age_breakdown_ws)
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     wb.save(output_path)
