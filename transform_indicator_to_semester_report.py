@@ -1,4 +1,5 @@
 import argparse
+from collections import defaultdict
 from pathlib import Path
 from typing import List, Optional
 
@@ -29,6 +30,117 @@ def get_header_index(headers: List[str], names: List[str]) -> dict:
     for name in names:
         result[name] = normalized.get(name.strip().lower())
     return result
+
+
+def build_township_breakdown(source_ws, target_ws) -> None:
+    headers = [cell.value if cell.value is not None else "" for cell in next(source_ws.iter_rows(min_row=1, max_row=1))]
+    header_map = get_header_index(headers, [
+        "Year",
+        "period",
+        "Project Name",
+        "Twp_MIMU",
+        "Penta1_U1",
+        "Penta1_U5",
+        "Penta3_U1",
+        "Penta3_U5",
+        "MMR1_U1",
+        "MMR1_U5",
+        "MMR2_U1",
+        "MMR2_U5",
+        "CD_U1",
+        "CD_U5",
+        "Td2",
+    ])
+
+    required_headers = [
+        "Year",
+        "period",
+        "Project Name",
+        "Twp_MIMU",
+        "Penta1_U1",
+        "Penta1_U5",
+        "Penta3_U1",
+        "Penta3_U5",
+        "MMR1_U1",
+        "MMR1_U5",
+        "MMR2_U1",
+        "MMR2_U5",
+        "CD_U1",
+        "CD_U5",
+        "Td2",
+    ]
+    for name in required_headers:
+        if header_map.get(name) is None:
+            raise ValueError(f"Required column '{name}' was not found in the source disaggregate sheet")
+
+    rows_by_key = defaultdict(list)
+    for row in source_ws.iter_rows(min_row=2, values_only=True):
+        if not any(cell is not None and str(cell).strip() != "" for cell in row):
+            continue
+
+        year = row[header_map["Year"]] if header_map["Year"] is not None and header_map["Year"] < len(row) else None
+        period = row[header_map["period"]] if header_map["period"] is not None and header_map["period"] < len(row) else None
+        project_name = row[header_map["Project Name"]] if header_map["Project Name"] is not None and header_map["Project Name"] < len(row) else ""
+        twp_mimu = row[header_map["Twp_MIMU"]] if header_map["Twp_MIMU"] is not None and header_map["Twp_MIMU"] < len(row) else ""
+        if year is None or period is None or not project_name or not twp_mimu:
+            continue
+
+        rows_by_key[(str(year), str(project_name), str(twp_mimu))].append((str(period), row))
+
+    header_row = [
+        "Year",
+        "Period",
+        "Project Name",
+        "Twp_MIMU",
+        "Penta 1",
+        "Penta3",
+        "MMR1",
+        "MMR2",
+        "CD",
+        "Td2",
+    ]
+    target_ws.append(header_row)
+    header_fill = PatternFill(fill_type="solid", fgColor="D9EAF7")
+    header_font = Font(bold=True)
+    for cell in target_ws[1]:
+        cell.fill = header_fill
+        cell.font = header_font
+
+    for (year, project_name, twp_mimu), rows in sorted(rows_by_key.items()):
+        quarter_rows = {
+            "Q1": [entry for entry in rows if str(entry[0]).upper().startswith("Q1")],
+            "Q2": [entry for entry in rows if str(entry[0]).upper().startswith("Q2")],
+            "Q3": [entry for entry in rows if str(entry[0]).upper().startswith("Q3")],
+            "Q4": [entry for entry in rows if str(entry[0]).upper().startswith("Q4")],
+        }
+
+        def sum_metric(metric_suffix: str, rows_for_period: List[tuple]) -> float:
+            total = 0.0
+            for _, row in rows_for_period:
+                col1 = header_map[metric_suffix + "_U1"]
+                col2 = header_map[metric_suffix + "_U5"]
+                if col1 is not None and col1 < len(row):
+                    total += to_number(row[col1])
+                if col2 is not None and col2 < len(row):
+                    total += to_number(row[col2])
+            return total
+
+        def append_period(period_name: str, selected_rows: List[tuple]) -> None:
+            penta1 = sum_metric("Penta1", selected_rows)
+            penta3 = sum_metric("Penta3", selected_rows)
+            mmr1 = sum_metric("MMR1", selected_rows)
+            mmr2 = sum_metric("MMR2", selected_rows)
+            cd = sum_metric("CD", selected_rows)
+            td2 = 0.0
+            for _, row in selected_rows:
+                col = header_map["Td2"]
+                if col is not None and col < len(row):
+                    td2 += to_number(row[col])
+            target_ws.append([year, period_name, project_name, twp_mimu, penta1, penta3, mmr1, mmr2, cd, td2])
+
+        append_period(f"S1_{year}", quarter_rows["Q1"] + quarter_rows["Q2"])
+        append_period(f"S2_{year}", quarter_rows["Q3"] + quarter_rows["Q4"])
+        append_period(f"Annual_{year}", rows)
 
 
 def build_semester_report(input_path: Path, output_path: Path, source_sheet: str = "Indicator", target_sheet: str = "Semester_Report") -> Path:
@@ -214,6 +326,15 @@ def build_semester_report(input_path: Path, output_path: Path, source_sheet: str
         for column_index in [8, 12, 16]:
             cell = target_ws.cell(row=current_row, column=column_index)
             cell.fill = total_fill
+
+    disaggregate_source_sheet = "VTHC_Doses disaggregate"
+    if disaggregate_source_sheet not in wb.sheetnames:
+        raise ValueError(f"Sheet '{disaggregate_source_sheet}' not found in {input_path}")
+
+    if "twn_breakdown" in wb.sheetnames:
+        del wb["twn_breakdown"]
+    breakdown_ws = wb.create_sheet(title="twn_breakdown")
+    build_township_breakdown(wb[disaggregate_source_sheet], breakdown_ws)
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     wb.save(output_path)
