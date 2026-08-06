@@ -115,11 +115,14 @@ def build_semester_report(input_path: Path, output_path: Path, source_sheet: str
         "S1 Target",
         "S1 Male",
         "S1 Female",
-        "S2 Total",
         "S2 Target",
         "S2 Male",
         "S2 Female",
-        "S2 Total and annual",
+        "S2 Total",
+        "Annual Target",
+        "Annual Male",
+        "Annual Female",
+        "Annual Total",
     ])
 
     for row in source_ws.iter_rows(min_row=2, values_only=True):
@@ -164,10 +167,13 @@ def build_semester_report(input_path: Path, output_path: Path, source_sheet: str
         s1_target = q1_target + q2_target
         s1_male = q1_u1_male + q1_1_5_male + q2_u1_male + q2_1_5_male
         s1_female = q1_u1_female + q1_1_5_female + q2_u1_female + q2_1_5_female
-        s2_total = q3_total + q4_total
         s2_target = q3_target + q4_target
         s2_male = q3_u1_male + q3_1_5_male + q4_u1_male + q4_1_5_male
         s2_female = q3_u1_female + q3_1_5_female + q4_u1_female + q4_1_5_female
+        s2_total = q3_total + q4_total
+        annual_target = q1_target + q2_target + q3_target + q4_target
+        annual_male = q1_u1_male + q1_1_5_male + q2_u1_male + q2_1_5_male + q3_u1_male + q3_1_5_male + q4_u1_male + q4_1_5_male
+        annual_female = q1_u1_female + q1_1_5_female + q2_u1_female + q2_1_5_female + q3_u1_female + q3_1_5_female + q4_u1_female + q4_1_5_female
         annual_total = q1_total + q2_total + q3_total + q4_total
 
         target_ws.append([
@@ -178,10 +184,13 @@ def build_semester_report(input_path: Path, output_path: Path, source_sheet: str
             s1_target,
             s1_male,
             s1_female,
-            s2_total,
             s2_target,
             s2_male,
             s2_female,
+            s2_total,
+            annual_target,
+            annual_male,
+            annual_female,
             annual_total,
         ])
 
