@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import List, Optional
 
 from openpyxl import Workbook, load_workbook
+from openpyxl.styles import Font, PatternFill
 
 
 def to_number(value) -> float:
@@ -107,7 +108,7 @@ def build_semester_report(input_path: Path, output_path: Path, source_sheet: str
         del wb[target_sheet]
 
     target_ws = wb.create_sheet(title=target_sheet)
-    target_ws.append([
+    header_row = [
         "Year",
         "Organization",
         "Project Name",
@@ -115,6 +116,7 @@ def build_semester_report(input_path: Path, output_path: Path, source_sheet: str
         "S1 Target",
         "S1 Male",
         "S1 Female",
+        "S1 Total",
         "S2 Target",
         "S2 Male",
         "S2 Female",
@@ -123,7 +125,14 @@ def build_semester_report(input_path: Path, output_path: Path, source_sheet: str
         "Annual Male",
         "Annual Female",
         "Annual Total",
-    ])
+    ]
+    target_ws.append(header_row)
+
+    header_fill = PatternFill(fill_type="solid", fgColor="D9EAF7")
+    header_font = Font(bold=True)
+    for cell in target_ws[1]:
+        cell.fill = header_fill
+        cell.font = header_font
 
     for row in source_ws.iter_rows(min_row=2, values_only=True):
         if not any(cell is not None and str(cell).strip() != "" for cell in row):
@@ -167,6 +176,7 @@ def build_semester_report(input_path: Path, output_path: Path, source_sheet: str
         s1_target = q1_target + q2_target
         s1_male = q1_u1_male + q1_1_5_male + q2_u1_male + q2_1_5_male
         s1_female = q1_u1_female + q1_1_5_female + q2_u1_female + q2_1_5_female
+        s1_total = q1_total + q2_total
         s2_target = q3_target + q4_target
         s2_male = q3_u1_male + q3_1_5_male + q4_u1_male + q4_1_5_male
         s2_female = q3_u1_female + q3_1_5_female + q4_u1_female + q4_1_5_female
@@ -176,7 +186,7 @@ def build_semester_report(input_path: Path, output_path: Path, source_sheet: str
         annual_female = q1_u1_female + q1_1_5_female + q2_u1_female + q2_1_5_female + q3_u1_female + q3_1_5_female + q4_u1_female + q4_1_5_female
         annual_total = q1_total + q2_total + q3_total + q4_total
 
-        target_ws.append([
+        row_values = [
             year,
             organization,
             project_name,
@@ -184,6 +194,7 @@ def build_semester_report(input_path: Path, output_path: Path, source_sheet: str
             s1_target,
             s1_male,
             s1_female,
+            s1_total,
             s2_target,
             s2_male,
             s2_female,
@@ -192,7 +203,17 @@ def build_semester_report(input_path: Path, output_path: Path, source_sheet: str
             annual_male,
             annual_female,
             annual_total,
-        ])
+        ]
+        target_ws.append(row_values)
+        current_row = target_ws.max_row
+        target_fill = PatternFill(fill_type="solid", fgColor="FFF2CC")
+        total_fill = PatternFill(fill_type="solid", fgColor="D9EAD3")
+        for column_index in [5, 9, 13]:
+            cell = target_ws.cell(row=current_row, column=column_index)
+            cell.fill = target_fill
+        for column_index in [8, 12, 16]:
+            cell = target_ws.cell(row=current_row, column=column_index)
+            cell.fill = total_fill
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     wb.save(output_path)
